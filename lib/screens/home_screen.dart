@@ -156,6 +156,12 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ],
                 ),
+                const SizedBox(height: 12),
+                _ActionButton(
+                  icon: Icons.bug_report,
+                  label: 'Crash logs (for debugging)',
+                  onTap: () => Navigator.pushNamed(context, '/crashlog'),
+                ),
               ],
             ),
           ),
