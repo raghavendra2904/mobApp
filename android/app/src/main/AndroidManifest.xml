@@ -6,7 +6,15 @@
 
     <!-- Foreground service for continuous accelerometer monitoring -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <!--
+        On Android 14+ (API 34) every foreground service must declare its
+        type-specific permission. flutter_background_service uses "dataSync"
+        by default, so we need FOREGROUND_SERVICE_DATA_SYNC. The other two
+        cover the cases where we'd switch the service type later.
+    -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_HEALTH" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
