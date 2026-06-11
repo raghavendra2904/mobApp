@@ -1,0 +1,22 @@
+<!--
+Merge these keys into ios/Runner/Info.plist after running `flutter create .`.
+They enable best-effort background motion sensing on iOS.
+
+Note: iOS does NOT permit drawing over other apps. The floating bubble option
+is disabled on iOS by the app code.
+-->
+<key>UIBackgroundModes</key>
+<array>
+    <string>fetch</string>
+    <string>processing</string>
+    <!-- Optional, only enable if you accept App Store review risk: -->
+    <!-- <string>audio</string> -->
+</array>
+
+<key>NSMotionUsageDescription</key>
+<string>Neck Alert uses the accelerometer to detect when you are holding your phone in a posture that bends your neck.</string>
+
+<key>BGTaskSchedulerPermittedIdentifiers</key>
+<array>
+    <string>id.flutter.background_service.refresh</string>
+</array>
