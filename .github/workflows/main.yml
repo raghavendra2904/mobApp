@@ -25,7 +25,7 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.24.0"
+          flutter-version: "3.27.1"
           channel: stable
           cache: true
 
@@ -40,6 +40,37 @@ jobs:
       - name: Restore custom AndroidManifest.xml
         # `flutter create` overwrites our manifest; restore it from git.
         run: git checkout -- android/app/src/main/AndroidManifest.xml
+
+      - name: Force a modern Kotlin Gradle plugin version
+        # Some plugin dependencies (e.g. shared_preferences_android) are compiled
+        # with Kotlin 1.9+. If `flutter create` emits an older template that pins
+        # Kotlin 1.7.x, the build fails with "Module was compiled with an
+        # incompatible version of Kotlin". Patch both possible locations.
+        run: |
+          set -e
+          # Newer template: android/settings.gradle uses the plugins { } DSL.
+          if [ -f android/settings.gradle ]; then
+            sed -i -E 's|id "org\.jetbrains\.kotlin\.android" version "[0-9.]+"|id "org.jetbrains.kotlin.android" version "1.9.22"|g' android/settings.gradle
+            echo "--- android/settings.gradle ---"
+            cat android/settings.gradle
+          fi
+          # Older template: top-level android/build.gradle has ext.kotlin_version.
+          if [ -f android/build.gradle ]; then
+            sed -i -E "s|ext\.kotlin_version = ['\"][0-9.]+['\"]|ext.kotlin_version = '1.9.22'|g" android/build.gradle
+            echo "--- android/build.gradle ---"
+            cat android/build.gradle
+          fi
+
+      - name: Bump Android compileSdk / minSdk for plugins that need it
+        # flutter_background_service & flutter_overlay_window often need a
+        # compileSdk >= 34 and minSdk >= 21. The default template usually has
+        # these, but patch defensively in case the runner template lags.
+        run: |
+          set -e
+          if [ -f android/app/build.gradle ]; then
+            sed -i -E 's|minSdk(Version)? = flutter\.minSdkVersion|minSdk = 21|g' android/app/build.gradle || true
+            sed -i -E 's|minSdkVersion flutter\.minSdkVersion|minSdkVersion 21|g' android/app/build.gradle || true
+          fi
 
       - name: Get dependencies
         run: flutter pub get
