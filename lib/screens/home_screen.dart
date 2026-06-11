@@ -36,27 +36,48 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _toggleMonitoring(bool turnOn) async {
-    if (turnOn) {
-      // Ask runtime permissions on Android 13+
-      if (Platform.isAndroid) {
-        await [
-          Permission.notification,
-          Permission.ignoreBatteryOptimizations,
-        ].request();
-        if (_settings.useFloatingOverlay) {
-          final granted = await FlutterOverlayWindow.isPermissionGranted();
-          if (!granted) {
-            await FlutterOverlayWindow.requestPermission();
+    try {
+      if (turnOn) {
+        // Ask runtime permissions on Android 13+. Wrap each in try so one
+        // denied permission doesn't blow up the whole flow.
+        if (Platform.isAndroid) {
+          try {
+            await Permission.notification.request();
+          } catch (_) {}
+          try {
+            await Permission.ignoreBatteryOptimizations.request();
+          } catch (_) {}
+          if (_settings.useFloatingOverlay) {
+            try {
+              final granted =
+                  await FlutterOverlayWindow.isPermissionGranted();
+              if (!granted) {
+                await FlutterOverlayWindow.requestPermission();
+              }
+            } catch (_) {}
           }
         }
+        final updated = _settings.copyWith(monitoringEnabled: true);
+        await SettingsService.save(updated);
+        await TiltMonitorService.start();
+      } else {
+        final updated = _settings.copyWith(monitoringEnabled: false);
+        await SettingsService.save(updated);
+        await TiltMonitorService.stop();
       }
-      final updated = _settings.copyWith(monitoringEnabled: true);
-      await SettingsService.save(updated);
-      await TiltMonitorService.start();
-    } else {
-      final updated = _settings.copyWith(monitoringEnabled: false);
-      await SettingsService.save(updated);
-      await TiltMonitorService.stop();
+    } catch (e, st) {
+      // Show the error to the user instead of crashing.
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Could not start monitoring: $e'),
+            duration: const Duration(seconds: 6),
+            backgroundColor: Colors.redAccent.shade700,
+          ),
+        );
+      }
+      // Print to logcat too — visible via `adb logcat | grep flutter`.
+      debugPrint('Toggle failed: $e\n$st');
     }
     await _refresh();
   }
