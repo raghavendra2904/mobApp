@@ -5,6 +5,7 @@ import 'screens/settings_screen.dart';
 import 'screens/analytics_screen.dart';
 import 'screens/history_screen.dart';
 import 'screens/instructions_screen.dart';
+import 'screens/crash_log_screen.dart';
 
 class NeckAlertApp extends StatelessWidget {
   const NeckAlertApp({super.key});
@@ -38,6 +39,7 @@ class NeckAlertApp extends StatelessWidget {
         '/analytics': (_) => const AnalyticsScreen(),
         '/history': (_) => const HistoryScreen(),
         '/instructions': (_) => const InstructionsScreen(),
+        '/crashlog': (_) => const CrashLogScreen(),
       },
     );
   }
