@@ -61,15 +61,21 @@ jobs:
             cat android/build.gradle
           fi
 
-      - name: Bump Android compileSdk / minSdk for plugins that need it
-        # flutter_background_service & flutter_overlay_window often need a
-        # compileSdk >= 34 and minSdk >= 21. The default template usually has
-        # these, but patch defensively in case the runner template lags.
+      - name: Bump Android compileSdk / minSdk and pin targetSdk
+        # Pin targetSdk to 33 to dodge Android 14+ MissingForegroundServiceTypeException
+        # raised by flutter_background_service v6.x — its Java code calls
+        # startForeground(id, notification) without the type arg required on API 34+.
         run: |
           set -e
           if [ -f android/app/build.gradle ]; then
             sed -i -E 's|minSdk(Version)? = flutter\.minSdkVersion|minSdk = 21|g' android/app/build.gradle || true
             sed -i -E 's|minSdkVersion flutter\.minSdkVersion|minSdkVersion 21|g' android/app/build.gradle || true
+            sed -i -E 's|targetSdk(Version)? = flutter\.targetSdkVersion|targetSdk = 33|g' android/app/build.gradle || true
+            sed -i -E 's|targetSdkVersion flutter\.targetSdkVersion|targetSdkVersion 33|g' android/app/build.gradle || true
+            sed -i -E 's|targetSdk(Version)? +[0-9]+|targetSdk 33|g' android/app/build.gradle || true
+            sed -i -E 's|targetSdk(Version)? *= *[0-9]+|targetSdk = 33|g' android/app/build.gradle || true
+            echo "--- android/app/build.gradle (after patch) ---"
+            cat android/app/build.gradle
           fi
 
       - name: Get dependencies
