@@ -61,21 +61,35 @@ jobs:
             cat android/build.gradle
           fi
 
-      - name: Bump Android compileSdk / minSdk and pin targetSdk
-        # Pin targetSdk to 33 to dodge Android 14+ MissingForegroundServiceTypeException
-        # raised by flutter_background_service v6.x — its Java code calls
-        # startForeground(id, notification) without the type arg required on API 34+.
+      - name: Pin targetSdk = 33 in both Groovy and Kotlin DSL build files
+        # Flutter 3.27 uses Kotlin DSL (build.gradle.kts) by default. Without
+        # patching that file, targetSdk stays at the Flutter default (35),
+        # which triggers Android 14+ MissingForegroundServiceTypeException in
+        # flutter_background_service v6.x. We must edit whichever file exists.
         run: |
           set -e
-          if [ -f android/app/build.gradle ]; then
-            sed -i -E 's|minSdk(Version)? = flutter\.minSdkVersion|minSdk = 21|g' android/app/build.gradle || true
-            sed -i -E 's|minSdkVersion flutter\.minSdkVersion|minSdkVersion 21|g' android/app/build.gradle || true
-            sed -i -E 's|targetSdk(Version)? = flutter\.targetSdkVersion|targetSdk = 33|g' android/app/build.gradle || true
-            sed -i -E 's|targetSdkVersion flutter\.targetSdkVersion|targetSdkVersion 33|g' android/app/build.gradle || true
-            sed -i -E 's|targetSdk(Version)? +[0-9]+|targetSdk 33|g' android/app/build.gradle || true
-            sed -i -E 's|targetSdk(Version)? *= *[0-9]+|targetSdk = 33|g' android/app/build.gradle || true
-            echo "--- android/app/build.gradle (after patch) ---"
-            cat android/app/build.gradle
+          echo "Files in android/app/:"
+          ls -la android/app/
+          for f in android/app/build.gradle android/app/build.gradle.kts; do
+            if [ -f "$f" ]; then
+              echo "Patching $f"
+              # Lower minSdk for the plugin requirements.
+              sed -i -E 's|minSdk(Version)? *= *flutter\.minSdkVersion|minSdk = 21|g' "$f" || true
+              sed -i -E 's|minSdkVersion +flutter\.minSdkVersion|minSdkVersion 21|g' "$f" || true
+              # Pin targetSdk to 33 across every syntax variant we've seen.
+              sed -i -E 's|targetSdk(Version)? *= *flutter\.targetSdkVersion|targetSdk = 33|g' "$f" || true
+              sed -i -E 's|targetSdkVersion +flutter\.targetSdkVersion|targetSdkVersion 33|g' "$f" || true
+              sed -i -E 's|targetSdk(Version)? *= *[0-9]+|targetSdk = 33|g' "$f" || true
+              sed -i -E 's|targetSdk(Version)? +[0-9]+|targetSdk 33|g' "$f" || true
+              echo "--- $f (after patch) ---"
+              cat "$f"
+              echo "--- end $f ---"
+            fi
+          done
+          # Sanity check: fail loudly if targetSdk is still 34/35 anywhere.
+          if grep -rE 'targetSdk[A-Za-z]*[ =]+(34|35)' android/app/; then
+            echo "ERROR: targetSdk patch did not stick" >&2
+            exit 1
           fi
 
       - name: Get dependencies
